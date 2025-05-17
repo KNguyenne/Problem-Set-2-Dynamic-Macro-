@@ -2,61 +2,50 @@ clear;
 clc;
 close all;
 
-            % Load the data
-            muc4a = readtable('muc4a.csv');
-            muc123a = readtable('muc123a.csv');
-            hh_expe = readtable('hhexpe08.csv');  
-            muc5b3 = readtable('muc5b3.csv');
-        
-            %% Income
-            % Merge tables on keys: tinh, diaban, hoso, matv
-            merged = outerjoin(muc4a, muc123a, ...
-                'Keys', {'tinh','huyen','xa', 'diaban', 'hoso', 'matv'}, ...
-                'MergeKeys', true);
-            merged = outerjoin(merged, hh_expe, ...
-                    'Keys', {'tinh','huyen','xa', 'diaban', 'hoso'}, ...
-                    'MergeKeys', true);
-            % Keep only household heads who are male
-            is_male_head = merged.m1ac3 == 1 & merged.m1ac2 == 1;
-         
-            % Keep only valid income entries
-            valid_income = merged.m4ac11 > 0 & ~ismissing(merged.m4ac11);
-            
-            % Filter the merged table
-            merged1 = merged(is_male_head & valid_income, :);
-            
-            % Compute log income
-            incomeVars = {'m4ac11','m4ac12f','m4ac22f','m4ac21','m4ac25'};
+% Load the data
+muc4a = readtable('muc4a.csv');
+muc123a = readtable('muc123a.csv');
+hh_expe = readtable('hhexpe08.csv');  
+muc5b3 = readtable('muc5b3.csv');
+
+% Merge tables on keys
+merged = outerjoin(muc4a, muc123a, ...
+    'Keys', {'tinh','huyen','xa', 'diaban', 'hoso', 'matv'}, ...
+    'MergeKeys', true);
+merged = outerjoin(merged, hh_expe, ...
+    'Keys', {'tinh','huyen','xa', 'diaban', 'hoso'}, ...
+    'MergeKeys', true);
+
+% Keep only male household heads
+is_male_head = merged.m1ac3 == 1 & merged.m1ac2 == 1;
+
+% Define income variable names
+incomeVars = {'m4ac11','m4ac12f','m4ac22f','m4ac21','m4ac25'};
 for i = 1:numel(incomeVars)
-    v = incomeVars{i};
-    merged1.(v)( isnan(merged1.(v)) ) = 0;
+    var = incomeVars{i};
+    merged.(var)( isnan(merged.(var)) ) = 0;
 end
-merged1.totalIncome = sum( merged1{:, incomeVars}, 2 );
 
-            i = merged1.totalIncome;
-            par.i = i ;
-            log_income = log(merged1.totalIncome);
-            par.income = log_income;
+% Compute total income
+merged.totalIncome = sum( merged{:, incomeVars}, 2 );
 
-            ages = merged1.m1ac5;
-            [G, age_values] = findgroups(ages);
-            mean_log_income = splitapply(@mean, log_income, G);
-            
-            % Exponentiate to get Gt
-            Gt = exp(mean_log_income);
-            
-            % Display results
-            results = table(age_values, Gt, ...
-                'VariableNames', {'Age', 'Gt'});
-            disp(results);
-            writetable(results, 'G_by_age.csv');
+% Filter for male household heads with valid income and age >= 18
+ages = merged.m1ac5;
+valid_income = merged.totalIncome > 0 & is_male_head & ages >= 18;
+merged1 = merged(valid_income, :);
 
-            %% Determinant of consumption
-             % Merge tables on keys: tinh, diaban, hoso, matv
-            merged2 = outerjoin(muc4a, muc5b3, ...
-                'Keys', {'tinh','huyen','xa', 'diaban', 'hoso'}, ...
-                'MergeKeys', true);
-            merged2 = outerjoin(merged2, hh_expe, ...
-                    'Keys', {'tinh','huyen','xa', 'diaban', 'hoso'}, ...
-                    'MergeKeys', true);
+% Log income
+log_income = log(merged1.totalIncome);
+par.i = merged1.totalIncome;
+par.income = log_income;
 
+% Group by age and compute Gt
+ages = merged1.m1ac5;
+[G, age_values] = findgroups(ages);
+mean_log_income = splitapply(@mean, log_income, G);
+Gt = exp(mean_log_income);
+
+% Output results
+results = table(age_values, Gt, 'VariableNames', {'Age', 'Gt'});
+disp(results);
+writetable(results, 'G_by_age.csv');

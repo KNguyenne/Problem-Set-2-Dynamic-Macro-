@@ -47,13 +47,12 @@ classdef model
             %% Simulation parameters.
 
             par.seed = 2025; % Seed for simulation.
-            par.TT = 100; % Number of time periods.
+            par.TT = par.T; % Number of time periods.
             par.NN = 3000; % Number of people.
 
             %% Load age‐specific income scale G_t
             G_data = readtable('G_by_age.csv');    
-            % assume the column is literally named 'G'
-            par.G = G_data.Gt;                        
+            par.G = G_data.Gt./G_data.Gt(1);                        
 
         end
         %% Generate state grids.
@@ -62,7 +61,7 @@ classdef model
             %% Capital grid.
 
             par.alen = 300; % Grid size for a.
-            par.amax = 30.0; % Upper bound for a.
+            par.amax = 100.0; % Upper bound for a.
             par.amin = 0.0; % Minimum a.
             
             assert(par.alen > 5,'Grid size for a should be positive and greater than 5.\n')

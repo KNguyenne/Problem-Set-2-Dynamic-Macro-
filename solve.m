@@ -20,7 +20,10 @@ classdef solve
             ygrid = par.ygrid;
             pmat = par.pmat;
         
-            G = par.G;   % G(1),…,G(T)
+            G_data = readtable('G_by_age.csv');    
+            par.G = G_data.Gt; 
+            G = par.G;
+            
             rho = par.rho;
             
             %% Initialize containers

@@ -1,13 +1,3 @@
-%% File Info.
-
-%{
-
-    simulate.m
-    ----------
-    This code simulates the model.
-
-%}
-
 %% Simulate class.
 
 classdef simulate
@@ -26,6 +16,7 @@ classdef simulate
             NN = par.NN; % People.
             T = par.T; % Life span.
             tr = par.tr; % Retirement.
+            G = par.G; 
 
             kappa = par.kappa; % Share of income as pension.
             ygrid = par.ygrid; % Exogenous income.
@@ -41,79 +32,83 @@ classdef simulate
             
             rng(par.seed);
 
-            pmat0 = pmat^100; % Stationary distirbution.
+            pmat0 = pmat^100; % Stationary distribution.
             cmat = cumsum(pmat,2); % CDF matrix.
 
-            y0_ind = randsample(par.ylen,NN,true,pmat0(1,:))'; % Index for initial income.
-            a0_ind = randsample(par.alen,NN,true)'; % Index for initial wealth.
-            t0_ind = randsample(T,NN,true)'; % Index for initial wealth.
+            y0_ind = randsample(par.ylen,NN,true,pmat0(1,:))'; % Initial income index.
+            a0_ind = randsample(par.alen,NN,true)'; % Initial wealth index.
+            t0_ind = randsample(T,NN,1); % Start at age 1.
             yr = nan(NN,1); % Retirement income.
 
             for i = 1:NN % Person loop.
-                
-                if t0_ind(i)>=tr % Retired now.
-                    yr(i) = ygrid(y0_ind(i)); % Store for pension.
-                    ysim(1,i) = kappa.*yr(i); % Pension in period 0 given age.
+                if t0_ind(i) >= tr
+                   yr(i) = ygrid(y0_ind(i)); % Store for pension.
+                    ysim(1,i) = G(tr-1) .* kappa.*yr(i); % Pension in period 0 given age.
                 else
                     ysim(1,i) = ygrid(y0_ind(i)); % Pension in period 0 given age.
                 end
 
-                tsim(1,i) = t0_ind(i); % Age in period 0.
-                csim(1,i) = cpol(a0_ind(i),t0_ind(i),y0_ind(i)); % Consumption in period 0 given a0.
-                asim(1,i) = apol(a0_ind(i),t0_ind(i),y0_ind(i)); % Savings for period 1 given a0.
-
-                if t0_ind(i) == tr-1 % Retired next period.
-                    yr(i) = ygrid(y0_ind(i)); % Store as pension for next period
-                elseif t0_ind(i) < tr-1
-                    y1_ind = find(rand<=cmat(y0_ind(i),:)); % Draw income shock for next period.
-                    y0_ind(i) = y1_ind(1);
+                % Initial period (age = 1)
+                ysim(1,i) = G(t0_ind(i)) .* ygrid(y0_ind(i)); % Initial income
+                tsim(1,i) = t0_ind(i); % Age
+                csim(1,i) = cpol(a0_ind(i), t0_ind(i), y0_ind(i)); % Consumption
+                asim(1,i) = apol(a0_ind(i), t0_ind(i), y0_ind(i)); % Next period's assets
+                
+                % Update income index for next period if not retiring next period
+                if t0_ind(i) < tr-1
+                    y1_ind = find(rand <= cmat(y0_ind(i), :), 1, 'first');
+                    y0_ind(i) = y1_ind;
+                elseif t0_ind(i) == tr-1
+                    yr(i) = G(tr-1) .* ygrid(y0_ind(i)); % Set pension base
+                    y0_ind(i) = y1_ind;
                 end
-
             end
 
-            usim(1,:) = model.utility(csim(1,:),par); % Utility in period 0 given a0.
+            usim(1,:) = model.utility(csim(1,:), par); % Initial utility
 
             %% Simulate endogenous variables.
 
             for j = 2:TT % Time loop.
                 for i = 1:NN % Person loop.
 
-                    age = tsim(j-1,i)+1; % Age in period t.
+                    age = tsim(j-1,i) + 1; % Current age
 
-                    if age <= T % Check if still alive.
-                        
-                        if age>=tr % Retired
-                            ysim(j,i) = kappa.*yr(i); % Pension in period t given age.
+                    if age <= T % Alive
+                        % Determine income
+                        if age >= tr
+                            ysim(j,i) = kappa * G(tr-1) * yr(i); % Pension
                         else
-                            ysim(j,i) = ygrid(y0_ind(i)); % Pension in period t given age.
+                            ysim(j,i) = G(age) .* ygrid(y0_ind(i)); % Working income
                         end
-
-                        tsim(j,i) = age; % Age in period t.
-                        at_ind = find(asim(j-1,i)==agrid); % Savings choice in the previous period is the state today. Find where the latter is on the grid.
-                        csim(j,i) = cpol(at_ind,age,y0_ind(i)); % Consumption in period t.
-                        asim(j,i) = apol(at_ind,age,y0_ind(i)); % Savings for period t+1.
-                        usim(j,i) = model.utility(csim(j,i),par); % Utility in period t.
-
+                        
+                        tsim(j,i) = age;
+                        % Find asset index (exact match as policy uses grid)
+                        at_ind = find(agrid == asim(j-1,i), 1);
+                        %if isempty(at_ind)
+                        %    [~, at_ind] = min(abs(agrid - asim(j-1,i)));
+                        %end
+                        % Update consumption and assets
+                        csim(j,i) = cpol(at_ind, age, y0_ind(i));
+                        asim(j,i) = apol(at_ind, age, y0_ind(i));
+                        usim(j,i) = model.utility(csim(j,i), par);
+                        
+                        % Update income state if working and not retiring next period
                         if age == tr-1 % Retire next period
-                            yr(i) = ygrid(y0_ind(i)); % Store as pension for next period
+                            yr(i) = G(tr-1) .* ygrid(y0_ind(i)); % Set pension base
                         elseif age < tr-1
-                            y1_ind = find(rand<=cmat(y0_ind(i),:)); % Draw income shock for next period.
+                            y1_ind = find(rand <= cmat(y0_ind(i), :), 1, 'first');
                             y0_ind(i) = y1_ind(1);
                         end
-
                     end
                 end
             end
 
             sim = struct();
-            
-            sim.ysim = ysim; % Simulated output.
-            sim.asim = asim; % Simulated savings.
-            sim.tsim = tsim; % Simulated age.
-            sim.csim = csim; % Simulated consumption.
-            sim.usim = usim; % Simulated utility.
-             
+            sim.ysim = ysim;
+            sim.asim = asim;
+            sim.tsim = tsim;
+            sim.csim = csim;
+            sim.usim = usim;
         end
-        
     end
 end
