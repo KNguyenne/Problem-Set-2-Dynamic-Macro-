@@ -1,0 +1,234 @@
+%% File Info.
+
+%{
+
+    my_graph.m
+    ----------
+    This code plots the value and policy functions and the time path of the variables.
+
+%}
+
+%% Graph class.
+
+classdef my_graph
+    methods(Static)
+        %% Plot value and policy functions.
+        
+        function [] = plot_policy(par,sol,sim)
+            %% Plot consumption policy function.
+
+            ystate = par.ygrid;
+            age = linspace(1,par.T,par.T);
+            
+            figure(1)
+            
+            surf(age(1:5:end),ystate,squeeze(sol.c(1,1:5:end,:))')
+                xlabel({'t'},'Interpreter','latex')
+                ylabel({'$y_{t}$'},'Interpreter','latex') 
+                zlabel({'$c_{t}$'},'Interpreter','latex') 
+            title('Consumption Policy Function, Lowest $a_t$','Interpreter','latex')
+            
+            figure(2)
+            
+            surf(age(1:5:end),ystate,squeeze(sol.c(end,1:5:end,:))')
+                xlabel({'t'},'Interpreter','latex')
+                ylabel({'$y_{t}$'},'Interpreter','latex') 
+                zlabel({'$c_{t}$'},'Interpreter','latex') 
+            title('Consumption Policy Function, Highest $a_t$','Interpreter','latex')
+            
+            %% Plot saving policy function.
+            
+            figure(3)
+            
+            surf(age(1:5:end),ystate,squeeze(sol.a(1,1:5:end,:))')
+                xlabel({'t'},'Interpreter','latex')
+                ylabel({'$y_{t}$'},'Interpreter','latex') 
+                zlabel({'$a_{t+1}$'},'Interpreter','latex') 
+            title('Saving Policy Function, Lowest $a_t$','Interpreter','latex')
+            
+            figure(4)
+            
+            surf(age(1:5:end),ystate,squeeze(sol.a(end,1:5:end,:))')
+                xlabel({'t'},'Interpreter','latex')
+                ylabel({'$y_{t}$'},'Interpreter','latex') 
+                zlabel({'$a_{t+1}$'},'Interpreter','latex') 
+            title('Saving Policy Function, Highest $a_t$','Interpreter','latex')
+            
+            %% Plot value function.
+            
+            figure(5)
+            
+            surf(age(1:5:end),ystate,squeeze(sol.v(1,1:5:end,:))')
+                xlabel({'t'},'Interpreter','latex')
+                ylabel({'$y_{t}$'},'Interpreter','latex') 
+                zlabel({'$v_t(a_t,t)$'},'Interpreter','latex')
+            title('Value Function, Lowest $a_t$','Interpreter','latex')
+
+            figure(6)
+            
+            surf(age(1:5:end),ystate,squeeze(sol.v(end,1:5:end,:))')
+                xlabel({'t'},'Interpreter','latex')
+                ylabel({'$y_{t}$'},'Interpreter','latex') 
+                zlabel({'$v_t(a_t,t)$'},'Interpreter','latex')
+            title('Value Function, Highest $a_t$','Interpreter','latex')
+
+            %% Plot consumption policy function.
+
+            lcp_c = nan(par.T,1);
+            lcp_a = nan(par.T,1);
+            lcp_u = nan(par.T,1);
+
+            for i=1:par.T
+                lcp_c(i) = mean(sim.csim(sim.tsim==i),"omitnan");
+                lcp_a(i) = mean(sim.asim(sim.tsim==i),"omitnan");
+                lcp_u(i) = mean(sim.usim(sim.tsim==i),"omitnan");
+            end
+
+            figure(7)
+            
+            plot(age,lcp_c)
+                xlabel({'$Age$'},'Interpreter','latex')
+                ylabel({'$c^{sim}_{t}$'},'Interpreter','latex') 
+            title('LCP of Consumption')
+            
+            %% Plot saving policy function.
+            
+            figure(8)
+            
+            plot(age,lcp_a)
+                xlabel({'$Age$'},'Interpreter','latex')
+                ylabel({'$a^{sim}_{t+1}$'},'Interpreter','latex') 
+            title('LCP of Savings')
+            
+            %% Plot value function.
+            
+            figure(9)
+            
+            plot(age,lcp_u)
+                xlabel({'$Age$'},'Interpreter','latex')
+                ylabel({'$u^{sim}_t$'},'Interpreter','latex') 
+            title('LCP of Utility')
+
+
+            %% lot life cycle profiles for varying β at fixed γ
+            figure(10)
+            
+            for b = betas
+            par.beta = b;
+            par.gamma = gamma;
+            plot(age, lcp_c, '--', 'DisplayName', sprintf('c, β=%.2f',b));
+            plot(age, lcp_a, '-', 'DisplayName', sprintf('a, β=%.2f',b));
+            end
+            plot(age,lcp_u)
+                xlabel({'$Age$'},'Interpreter','latex')
+                ylabel({'$u^{sim}_t$'},'Interpreter','latex') 
+            title('LCP of Utility')
+            xlabel('Age'); ylabel('Profile');
+            title(sprintf('Life-cycle Profiles at γ=%.2f',gamma));
+            legend('Location','best');
+            hold off;
+
+            %% lot life cycle profiles for varying β at fixed γ
+            figure(11)
+            
+            for b = betas
+            par.beta = b;
+            par.gamma = gamma;
+            plot(age, lcp_c, '--', 'DisplayName', sprintf('c, β=%.2f',b));
+            plot(age, lcp_a, '-', 'DisplayName', sprintf('a, β=%.2f',b));
+            end
+            plot(age,lcp_u)
+                xlabel({'$Age$'},'Interpreter','latex')
+                ylabel({'$u^{sim}_t$'},'Interpreter','latex') 
+            title('LCP of Utility')
+            xlabel('Age'); ylabel('Profile');
+            title(sprintf('Life-cycle Profiles at γ=%.2f',gamma));
+            legend('Location','best');
+            hold off;
+
+            %% lot life cycle profiles for varying β at fixed γ
+            figure(12)
+            
+            for b = betas
+            par.beta = b;
+            par.gamma = gamma;
+            plot(age, lcp_c, '--', 'DisplayName', sprintf('c, β=%.2f',b));
+            plot(age, lcp_a, '-', 'DisplayName', sprintf('a, β=%.2f',b));
+            end
+            plot(age,lcp_u)
+                xlabel({'$Age$'},'Interpreter','latex')
+                ylabel({'$u^{sim}_t$'},'Interpreter','latex') 
+            title('LCP of Utility')
+            xlabel('Age'); ylabel('Profile');
+            title(sprintf('Life-cycle Profiles at γ=%.2f',gamma));
+            legend('Location','best');
+            hold off;
+
+        end
+        %% Plot life cycle profiles for varying β at fixed γ
+    function [] = plot_vary_beta_fixed_gamma(gamma, betas)
+        par = model.setup();
+        age = 1:par.T;
+        figure;
+        hold on;
+        for b = betas
+            par.beta = b;
+            par.gamma = gamma;
+            par = model.gen_grids(par);
+            sol = solve.lc(par);
+            plot(age, lcp_c, '--', 'DisplayName', sprintf('c, β=%.2f',b));
+            plot(age, lcp_a, '-', 'DisplayName', sprintf('a, β=%.2f',b));
+        end
+        xlabel('Age'); ylabel('Profile');
+        title(sprintf('Life-cycle Profiles at γ=%.2f',gamma));
+        legend('Location','best');
+        hold off;
+    end
+
+    %% Plot life cycle profiles for varying γ at fixed β
+    function [] = plot_vary_gamma_fixed_beta(beta, gammas)
+        par = model.setup();
+        age = 1:par.T;
+        figure;
+        hold on;
+        for g = gammas
+            par.beta = beta;
+            par.gamma = g;
+            par = model.gen_grids(par);
+            sol = solve.lc(par);
+            sim = simulate.lc(par,sol);
+            lcp_c = arrayfun(@(t) mean(sim.csim(sim.tsim==t),'omitnan'), age);
+            lcp_a = arrayfun(@(t) mean(sim.asim(sim.tsim==t),'omitnan'), age);
+            plot(age, lcp_c, '--', 'DisplayName', sprintf('c, γ=%.2f',g));
+            plot(age, lcp_a, '-', 'DisplayName', sprintf('a, γ=%.2f',g));
+        end
+        xlabel('Age'); ylabel('Profile');
+        title(sprintf('Life-cycle Profiles at β=%.2f',beta));
+        legend('Location','best');
+        hold off;
+    end
+
+    %% Plot heatmap of average wealth for combinations of β and γ
+    function [] = plot_avg_wealth_heatmap(betas, gammas)
+        par0 = model.setup();
+        avgW = nan(length(betas), length(gammas));
+        for i = 1:length(betas)
+            for j = 1:length(gammas)
+                par = par0;
+                par.beta = betas(i);
+                par.gamma = gammas(j);
+                par = model.gen_grids(par);
+                sol = solve.lc(par);
+                sim = simulate.lc(par,sol);
+                avgW(i,j) = mean(sim.asim(:),'omitnan');
+            end
+        end
+        figure;
+        imagesc(gammas, betas, avgW);
+        set(gca,'YDir','normal');
+        colorbar;
+        xlabel('γ'); ylabel('β');
+        title('Average Simulated Wealth Heatmap');
+    end
+    end
+end

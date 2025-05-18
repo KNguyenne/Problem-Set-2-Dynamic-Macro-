@@ -108,8 +108,83 @@ classdef my_graph
                 xlabel({'$Age$'},'Interpreter','latex')
                 ylabel({'$u^{sim}_t$'},'Interpreter','latex') 
             title('LCP of Utility')
-
         end
+   function [] = plot_simulations()
+    %% Settings
+    betas = [0.90, 0.92, 0.94, 0.96];
+    gammas = [2.00, 3.00, 4.00, 5.00];
+    
+    %% 1. Vary β, fix γ = 2.00
+    gamma_fixed = 2.00;
+    figure_counter = 1;
+    for i = 1:length(betas)
+        par = model.setup();
+        par.beta = betas(i);
+        par.gamma = gamma_fixed;
+        par = model.gen_grids(par);
+        sol = solve.lc(par);
+        sim = simulate.lc(par, sol);
         
+        figure(figure_counter)
+        subplot(2,1,1)
+        plot(1:par.T, mean(sim.csim,2), 'LineWidth', 2)
+        title(['Consumption profile, β=', num2str(betas(i)), ', γ=2.0'])
+        xlabel('Age'), ylabel('Consumption')
+
+        subplot(2,1,2)
+        plot(1:par.T, mean(sim.asim,2), 'LineWidth', 2)
+        title(['Wealth profile, β=', num2str(betas(i)), ', γ=2.0'])
+        xlabel('Age'), ylabel('Wealth')
+        
+        figure_counter = figure_counter + 1;
+    end
+
+    %% 2. Vary γ, fix β = 0.96
+    beta_fixed = 0.96;
+    for i = 1:length(gammas)
+        par = model.setup();
+        par.beta = beta_fixed;
+        par.gamma = gammas(i);
+        par = model.gen_grids(par);
+        sol = solve.lc(par);
+        sim = simulate.lc(par, sol);
+        
+        figure(figure_counter)
+        subplot(2,1,1)
+        plot(1:par.T, mean(sim.csim,2), 'LineWidth', 2)
+        title(['Consumption profile, β=0.96, γ=', num2str(gammas(i))])
+        xlabel('Age'), ylabel('Consumption')
+
+        subplot(2,1,2)
+        plot(1:par.T, mean(sim.asim,2), 'LineWidth', 2)
+        title(['Wealth profile, β=0.96, γ=', num2str(gammas(i))])
+        xlabel('Age'), ylabel('Wealth')
+        
+        figure_counter = figure_counter + 1;
+    end
+
+    %% 3. Heatmap: average wealth for all β and γ
+    avg_wealth = zeros(length(betas), length(gammas));
+    for i = 1:length(betas)
+        for j = 1:length(gammas)
+            par = model.setup();
+            par.beta = betas(i);
+            par.gamma = gammas(j);
+            par = model.gen_grids(par);
+            sol = solve.lc(par);
+            sim = simulate.lc(par, sol);
+            avg_wealth(i,j) = mean(sim.asim(:));
+        end
+    end
+
+    figure(figure_counter)
+    imagesc(gammas, betas, avg_wealth)
+    colorbar
+    xlabel('\gamma'), ylabel('\beta')
+    title('Average Wealth Heatmap')
+    set(gca, 'YDir', 'normal') % to align (0,0) to bottom-left
+end
+
+    
     end
 end

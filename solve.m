@@ -23,9 +23,7 @@ classdef solve
             G_data = readtable('G_by_age.csv');    
             par.G = G_data.Gt; 
             G = par.G;
-            
-            rho = par.rho;
-            
+                        
             %% Initialize containers
             v1 = nan(alen, T, ylen);
             a1 = nan(alen, T, ylen);
@@ -44,12 +42,13 @@ classdef solve
                     v1(:, T, :) = model.utility(c1(:, T, :), par);
                  else
                     for i = 1:ylen
+
                      if t < tr
-                yt = G(t) * ygrid(i);
-                ev = squeeze( v1(:,T-age+2,:) ) * pmat(i,:)';
+                        yt = G(t) * ygrid(i);
+                        ev = squeeze( v1(:,T-age+2,:) ) * pmat(i,:)';
                      else
-                yt = kappa * (G(tr-1) * ygrid(i));
-                ev = v1(:,T-age+2,i);
+                        yt = kappa * (G(tr-1) * ygrid(i));
+                        ev = squeeze( v1(:,T-age+2,:) ) * pmat(i,:)';
                     end
 
                         for p = 1:alen % Loop over the a-states.
@@ -70,8 +69,8 @@ classdef solve
                     end
                 end
         
-                if mod(t, 5) == 0
-                    fprintf('Age: %d.\n', t);
+                if mod(T-age+1, 5) == 0
+                    fprintf('Age: %d.\n', T-age+1);
                 end
             end
         

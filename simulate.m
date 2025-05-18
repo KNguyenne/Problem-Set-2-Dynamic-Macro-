@@ -42,25 +42,22 @@ classdef simulate
 
             for i = 1:NN % Person loop.
                 if t0_ind(i) >= tr
-                   yr(i) = ygrid(y0_ind(i)); % Store for pension.
+                    yr(i) = ygrid(y0_ind(i)); % Store for pension.
                     ysim(1,i) = G(tr-1) .* kappa.*yr(i); % Pension in period 0 given age.
                 else
                     ysim(1,i) = ygrid(y0_ind(i)); % Pension in period 0 given age.
                 end
 
                 % Initial period (age = 1)
-                ysim(1,i) = G(t0_ind(i)) .* ygrid(y0_ind(i)); % Initial income
                 tsim(1,i) = t0_ind(i); % Age
                 csim(1,i) = cpol(a0_ind(i), t0_ind(i), y0_ind(i)); % Consumption
                 asim(1,i) = apol(a0_ind(i), t0_ind(i), y0_ind(i)); % Next period's assets
                 
-                % Update income index for next period if not retiring next period
-                if t0_ind(i) < tr-1
-                    y1_ind = find(rand <= cmat(y0_ind(i), :), 1, 'first');
-                    y0_ind(i) = y1_ind;
-                elseif t0_ind(i) == tr-1
+                if t0_ind(i) == tr-1
                     yr(i) = G(tr-1) .* ygrid(y0_ind(i)); % Set pension base
-                    y0_ind(i) = y1_ind;
+                elseif t0_ind(i) < tr-1
+                    y1_ind = find(rand <= cmat(y0_ind(i), :), 1, 'first');
+                    y0_ind(i) = y1_ind(1);
                 end
             end
 
@@ -82,12 +79,7 @@ classdef simulate
                         end
                         
                         tsim(j,i) = age;
-                        % Find asset index (exact match as policy uses grid)
                         at_ind = find(agrid == asim(j-1,i), 1);
-                        %if isempty(at_ind)
-                        %    [~, at_ind] = min(abs(agrid - asim(j-1,i)));
-                        %end
-                        % Update consumption and assets
                         csim(j,i) = cpol(at_ind, age, y0_ind(i));
                         asim(j,i) = apol(at_ind, age, y0_ind(i));
                         usim(j,i) = model.utility(csim(j,i), par);
