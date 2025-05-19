@@ -108,6 +108,10 @@ classdef my_graph
                 xlabel({'$Age$'},'Interpreter','latex')
                 ylabel({'$u^{sim}_t$'},'Interpreter','latex') 
             title('LCP of Utility')   
+        
+        end
+
+        function [] = plot_policy_heat(par,sol,sim)
 
         beta_list = [0.90, 0.92, 0.94, 0.96];
         num_betas = length(beta_list);
@@ -117,23 +121,14 @@ classdef my_graph
         age = (1:par.T)'; % Define age vector
         
         for b = 1:num_betas
-            % === Set Parameters ===
-            par.beta = beta_list(b);
-            par.ganma = 2.00;
-        
-            % === Solve model (assumed you have this function) ===
-            sol = q_solve.cs_q_model_fin(par); 
-        
-            % === Simulate model ===
-            sim = q_simulate.lc(par, sol);
-        
-            % === Compute Lifecycle Profiles ===
+            par.gamma = 2.00;
+       
             for i = 1:par.T
                 lcp_c_all(i, b) = mean(sim.csim(sim.tsim == i), 'omitnan');
-                lcp_a_all(i, b) = mean(sim.Asim(sim.tsim == i), 'omitnan');
+                lcp_a_all(i, b) = mean(sim.asim(sim.tsim == i), 'omitnan');
             end
         end
-        % === Plot Lifecycle Profile of Consumption ===
+        % Plot Lifecycle Profile of Consumption
         figure;
         plot(age, lcp_c_all, 'LineWidth', 1.5)
         xlabel('$Age$', 'Interpreter', 'latex')
@@ -142,7 +137,7 @@ classdef my_graph
             'Interpreter', 'latex', 'Location', 'best')
         title('Lifecycle Profile of Consumption', 'Interpreter', 'latex')
         grid on
-        % === Plot Lifecycle Profile of Assets/Wealth ===
+        % Plot Lifecycle Profile of Assets/Wealth
         figure;
         plot(age, lcp_a_all, 'LineWidth', 1.5)
         xlabel('$Age$', 'Interpreter', 'latex')
@@ -152,45 +147,33 @@ classdef my_graph
         title('Lifecycle Profile of Wealth', 'Interpreter', 'latex')
         grid on
         
-        sigma_list = [2.00, 3.00, 4.00, 5.00];
         beta_list = [0.90, 0.92, 0.94, 0.96];
-        num_ganmas = length(sigma_list);
-        num_betas = length(beta_list);
+        gamma_list = [2.0, 3.0, 4.0, 5.0];
         
-        avg_wealth_matrix = nan(num_betas, num_ganmas); % Rows: beta, Cols: gamma
+        num_betas = length(beta_list);
+        num_gammas = length(gamma_list);
+        avg_wealth_matrix = nan(num_betas, num_gammas);
         
         for i = 1:num_betas
-            for j = 1:num_ganmas
-                % Set parameter values
-                par.beta = beta_list(i);
-                par.ganma = ganma_list(j);
-        
-                % Solve and simulate 
-                sol = q_solve.cs_q_model_fin(par); 
-                sim = q_simulate.lc(par, sol); 
-        
-                % Compute average simulated wealth
-                avg_wealth = mean(sim.Asim(:), 'omitnan');
-                avg_wealth_matrix(i, j) = avg_wealth;
+            for j = 1:num_gammas
+                avg_wealth_matrix(i, j) = mean(sim.asim(:), 'omitnan'); % Step 4: Store results
             end
         end
-        % === Plot Heatmap ===
+        % Plot Heatmap 
         figure;
-        imagesc(ganma_list, beta_list, avg_wealth_matrix);
+        imagesc(gamma_list, beta_list, avg_wealth_matrix);
         colorbar;
         xlabel('$\gamma$', 'Interpreter', 'latex');
         ylabel('$\beta$', 'Interpreter', 'latex');
         title('Average Simulated Wealth (Heatmap)', 'Interpreter', 'latex');
-        
-        % Set x/y ticks
-        set(gca, 'XTick', ganma_list);
+        set(gca, 'XTick', gamma_list);
         set(gca, 'YTick', beta_list);
         
         % Optional: Display numeric values on the heatmap
         textStrings = strtrim(cellstr(num2str(avg_wealth_matrix(:), '%.2f')));
-        [x, y] = meshgrid(1:num_ganmas, 1:num_betas);
+        [x, y] = meshgrid(1:num_gammas, 1:num_betas);
         text(x(:), y(:), textStrings, 'HorizontalAlignment', 'center', 'Color', 'w');
-        
+               
         end
 
     end
