@@ -107,84 +107,91 @@ classdef my_graph
             plot(age,lcp_u)
                 xlabel({'$Age$'},'Interpreter','latex')
                 ylabel({'$u^{sim}_t$'},'Interpreter','latex') 
-            title('LCP of Utility')
+            title('LCP of Utility')   
+
+        beta_list = [0.90, 0.92, 0.94, 0.96];
+        num_betas = length(beta_list);
+        lcp_c_all = nan(par.T, num_betas); % consumption
+        lcp_a_all = nan(par.T, num_betas); % assets
+        
+        age = (1:par.T)'; % Define age vector
+        
+        for b = 1:num_betas
+            % === Set Parameters ===
+            par.beta = beta_list(b);
+            par.ganma = 2.00;
+        
+            % === Solve model (assumed you have this function) ===
+            sol = q_solve.cs_q_model_fin(par); 
+        
+            % === Simulate model ===
+            sim = q_simulate.lc(par, sol);
+        
+            % === Compute Lifecycle Profiles ===
+            for i = 1:par.T
+                lcp_c_all(i, b) = mean(sim.csim(sim.tsim == i), 'omitnan');
+                lcp_a_all(i, b) = mean(sim.Asim(sim.tsim == i), 'omitnan');
+            end
         end
-   function [] = plot_simulations()
-    %% Settings
-    betas = [0.90, 0.92, 0.94, 0.96];
-    gammas = [2.00, 3.00, 4.00, 5.00];
-    
-    %% 1. Vary β, fix γ = 2.00
-    gamma_fixed = 2.00;
-    figure_counter = 1;
-    for i = 1:length(betas)
-        par = model.setup();
-        par.beta = betas(i);
-        par.gamma = gamma_fixed;
-        par = model.gen_grids(par);
-        sol = solve.lc(par);
-        sim = simulate.lc(par, sol);
+        % === Plot Lifecycle Profile of Consumption ===
+        figure;
+        plot(age, lcp_c_all, 'LineWidth', 1.5)
+        xlabel('$Age$', 'Interpreter', 'latex')
+        ylabel('$c^{sim}_t$', 'Interpreter', 'latex')
+        legend(arrayfun(@(b) ['$\beta = $' num2str(b)], beta_list, 'UniformOutput', false), ...
+            'Interpreter', 'latex', 'Location', 'best')
+        title('Lifecycle Profile of Consumption', 'Interpreter', 'latex')
+        grid on
+        % === Plot Lifecycle Profile of Assets/Wealth ===
+        figure;
+        plot(age, lcp_a_all, 'LineWidth', 1.5)
+        xlabel('$Age$', 'Interpreter', 'latex')
+        ylabel('$a^{sim}_{t+1}$', 'Interpreter', 'latex')
+        legend(arrayfun(@(b) ['$\beta = $' num2str(b)], beta_list, 'UniformOutput', false), ...
+            'Interpreter', 'latex', 'Location', 'best')
+        title('Lifecycle Profile of Wealth', 'Interpreter', 'latex')
+        grid on
         
-        figure(figure_counter)
-        subplot(2,1,1)
-        plot(1:par.T, mean(sim.csim,2), 'LineWidth', 2)
-        title(['Consumption profile, β=', num2str(betas(i)), ', γ=2.0'])
-        xlabel('Age'), ylabel('Consumption')
-
-        subplot(2,1,2)
-        plot(1:par.T, mean(sim.asim,2), 'LineWidth', 2)
-        title(['Wealth profile, β=', num2str(betas(i)), ', γ=2.0'])
-        xlabel('Age'), ylabel('Wealth')
+        sigma_list = [2.00, 3.00, 4.00, 5.00];
+        beta_list = [0.90, 0.92, 0.94, 0.96];
+        num_ganmas = length(sigma_list);
+        num_betas = length(beta_list);
         
-        figure_counter = figure_counter + 1;
-    end
-
-    %% 2. Vary γ, fix β = 0.96
-    beta_fixed = 0.96;
-    for i = 1:length(gammas)
-        par = model.setup();
-        par.beta = beta_fixed;
-        par.gamma = gammas(i);
-        par = model.gen_grids(par);
-        sol = solve.lc(par);
-        sim = simulate.lc(par, sol);
+        avg_wealth_matrix = nan(num_betas, num_ganmas); % Rows: beta, Cols: gamma
         
-        figure(figure_counter)
-        subplot(2,1,1)
-        plot(1:par.T, mean(sim.csim,2), 'LineWidth', 2)
-        title(['Consumption profile, β=0.96, γ=', num2str(gammas(i))])
-        xlabel('Age'), ylabel('Consumption')
-
-        subplot(2,1,2)
-        plot(1:par.T, mean(sim.asim,2), 'LineWidth', 2)
-        title(['Wealth profile, β=0.96, γ=', num2str(gammas(i))])
-        xlabel('Age'), ylabel('Wealth')
+        for i = 1:num_betas
+            for j = 1:num_ganmas
+                % Set parameter values
+                par.beta = beta_list(i);
+                par.ganma = ganma_list(j);
         
-        figure_counter = figure_counter + 1;
-    end
-
-    %% 3. Heatmap: average wealth for all β and γ
-    avg_wealth = zeros(length(betas), length(gammas));
-    for i = 1:length(betas)
-        for j = 1:length(gammas)
-            par = model.setup();
-            par.beta = betas(i);
-            par.gamma = gammas(j);
-            par = model.gen_grids(par);
-            sol = solve.lc(par);
-            sim = simulate.lc(par, sol);
-            avg_wealth(i,j) = mean(sim.asim(:));
+                % Solve and simulate 
+                sol = q_solve.cs_q_model_fin(par); 
+                sim = q_simulate.lc(par, sol); 
+        
+                % Compute average simulated wealth
+                avg_wealth = mean(sim.Asim(:), 'omitnan');
+                avg_wealth_matrix(i, j) = avg_wealth;
+            end
         end
-    end
+        % === Plot Heatmap ===
+        figure;
+        imagesc(ganma_list, beta_list, avg_wealth_matrix);
+        colorbar;
+        xlabel('$\gamma$', 'Interpreter', 'latex');
+        ylabel('$\beta$', 'Interpreter', 'latex');
+        title('Average Simulated Wealth (Heatmap)', 'Interpreter', 'latex');
+        
+        % Set x/y ticks
+        set(gca, 'XTick', ganma_list);
+        set(gca, 'YTick', beta_list);
+        
+        % Optional: Display numeric values on the heatmap
+        textStrings = strtrim(cellstr(num2str(avg_wealth_matrix(:), '%.2f')));
+        [x, y] = meshgrid(1:num_ganmas, 1:num_betas);
+        text(x(:), y(:), textStrings, 'HorizontalAlignment', 'center', 'Color', 'w');
+        
+        end
 
-    figure(figure_counter)
-    imagesc(gammas, betas, avg_wealth)
-    colorbar
-    xlabel('\gamma'), ylabel('\beta')
-    title('Average Wealth Heatmap')
-    set(gca, 'YDir', 'normal') % to align (0,0) to bottom-left
-end
-
-    
     end
 end
